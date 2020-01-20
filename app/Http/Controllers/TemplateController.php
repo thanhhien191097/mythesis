@@ -87,8 +87,53 @@ class TemplateController extends BaseController
 
 	public function postExcel(Request $request){
 		if($request->hasFile('file_excel')){
-			dd("ZO");
+			$file = $request->file_excel;
+            $fileExtension          = $file->getClientOriginalExtension();
+            $fileName               = pathinfo($file->getClientOriginalName(), PATHINFO_FILENAME);
+            $fileNameDestination    = uniqid($fileName).".".$fileExtension;
+			$file->move(public_path('upload_excel'), $fileNameDestination);
+			return $this->responseAPI(false, $fileNameDestination, 'Thành công', 200);
+		}else{
+			return $this->responseAPI(true, [], 'Thất bại', 404);
 		}
-		dd("Kp");
+	}
+
+	public function executeExcel(Request $request){
+		$template 	= $request->input('template', '');
+		$excel    	= $request->input('name_excel', '');
+		$fileExcel 	= public_path('upload_excel')."/".$excel;
+		$templateOrigin = public_path()."/".$template.".xlsx";
+
+		if(!file_exists($fileExcel) || !file_exists($templateOrigin)){
+			return $this->responseAPI(true, [], 'File excel không tồn tại', 404);
+		}
+
+		$originExcel 	= fastexcel()->import($templateOrigin)->first();
+		$dataExcel 		= fastexcel()->import($fileExcel);
+		if(count($dataExcel) == 0){
+			return $this->responseAPI(true, [], 'File excel không có dữ liệu', 404);
+		}
+		
+		foreach($dataExcel as $index => $excel){
+			if($index == 0){
+				$compare = array_diff(array_keys($originExcel), array_keys($excel));
+				if(count($compare) > 0){
+					return $this->responseAPI(true, [], 'File excel không khớp định dạng template', 500);
+				}
+			}
+			$data = $excel;
+			$html = view($template, compact('data'))->render();
+			ProcessPodcast::dispatch($html);	
+		}
+
+	}
+
+	public function responseAPI($error, $data, $message, $code){
+		return response()
+                ->json([
+                    'error'   => $error,
+                    'data'    => $data,
+                    'message' => $message,
+                ], $code);
 	}
 }

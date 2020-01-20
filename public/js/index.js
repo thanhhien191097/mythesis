@@ -1,6 +1,98 @@
 // Activate Next Step
 
 $(document).ready(function() {
+    var timerId;
+    $('.progress').fadeOut();
+
+    $('#execute_send_mail').click(function(){
+        let name_excel = $('input[name=name_excel]').val();
+        if(name_excel.length == 0){
+            alert("Vui lòng import file Excel");
+            return;
+        }
+        let arrTemp  = $("#sample_excel").attr('href').split('/');
+        let template = arrTemp[arrTemp.length-1];
+
+        $.ajax({
+            url: executeExcel,
+            type: "POST",
+            data: {
+                template, name_excel
+            },
+            dataType: "text",
+            headers: {
+                'X-CSRF-TOKEN': $('input[name="_token"').val()
+            },
+            success: function(data, textStatus, jqXHR) {
+                if(!data.error){
+                    console.log(data);
+                }else{
+                    
+                }
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                
+            }
+        });
+
+    });
+
+    $('#upload-excel').change(function () {
+        if ($(this).val().length > 0) {
+            var formData = new FormData();
+            var excelFile = $(this)[0].files[0];
+            formData.append("file_excel", excelFile);
+
+            var percent = 0;
+            $('.progress').fadeIn();
+            $('#load').css('width', '0%');
+            $('#load').addClass('progress-bar-striped active');
+            timerId = setInterval(function () {
+                // increment progress bar
+                percent += 5 + Math.floor(Math.random() * Math.floor(5));
+                $('#load').css('width', percent + '%');
+                $('#load').html(percent + '%');
+                if(percent >= 100){
+                    clearInterval(timerId);
+                    $('#pay').attr('disabled', false);
+                    $('#load').removeClass('progress-bar-striped active');
+                    $('#load').html('wait a moment');
+                }
+            }, 100);
+
+            $.ajax({
+                url: postExcel,
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: {
+                    'X-CSRF-TOKEN': $('input[name="_token"').val()
+                },
+                success: function(data, textStatus, jqXHR) {
+                    if(!data.error){
+                        $('.progress-bar').css('background-color', '#2fafff');
+                        $('#load').html('Import success');
+                        $('.progress').delay(2000).fadeOut('slow');
+                        $('input[name=name_excel]').val(data.data);
+                    }else{
+                        alert("Lỗi");
+                    }
+                },
+                error: function(jqXHR, textStatus, errorThrown) {
+                    $('.progress-bar').css('background-color', '#dc3545');    
+                    $('#load').html('Import failure');
+                    $('.progress').delay(2000).fadeOut('slow');
+                },
+                complete: function(datta){
+                    clearInterval(timerId);
+                    $('#upload-excel').val('');
+                    $('#load').css('width','100%');
+                    $('#load').removeClass('progress-bar-striped active');
+                }
+            });
+        }
+    })
 
 	// Slick Library for slider
 	$(".slick-carousel").slick({
@@ -28,15 +120,23 @@ $(document).ready(function() {
             $target.show();
         }
     });
+
+    $('#step-1 .btn-select').click(function(){
+        console.log(urlDownload + "/" + $(this).data('template'));
+        $("#sample_excel").attr("href", urlDownload + "/" + $(this).data('template'));
+
+        $('ul.setup-panel li:eq(1)').removeClass('disabled');
+        $('ul.setup-panel li a[href="#step-2"]').trigger('click');
+    });
     
     $('ul.setup-panel li.active a').trigger('click');
     
     // DEMO //
-    $('#activate-step-2').on('click', function(e) {
-        $('ul.setup-panel li:eq(1)').removeClass('disabled');
-        $('ul.setup-panel li a[href="#step-2"]').trigger('click');
-        // $(this).remove();
-    })
+    // $('#activate-step-2').on('click', function(e) {
+    //     $('ul.setup-panel li:eq(1)').removeClass('disabled');
+    //     $('ul.setup-panel li a[href="#step-2"]').trigger('click');
+    //     // $(this).remove();
+    // })
     
     $('#activate-step-3').on('click', function(e) {
         $('ul.setup-panel li:eq(2)').removeClass('disabled');
@@ -85,10 +185,8 @@ function mark(el) {
 	});  
 
     var templateName = $(el).attr("data-tn");
-    console.log(templateName); 
 
     $('#templateForm').attr('action', templateName);
-    // console.log("Zo day");
     // debugger;
 
 	// Add active attribute to this element

@@ -37,6 +37,11 @@ Route::post('downloadPost', [
 	'uses' => 'TemplateController@downloadPostTemplate'
 ]);
 
+Route::post('execute_excel', [
+	'as' => 'execute.excel',
+	'uses' => 'TemplateController@executeExcel'
+]);
+
 // Route::get('sendEmail', [
 // 	'as' => 'sendEmail',
 // 	'uses' => 'TemplateController@sendMail'
